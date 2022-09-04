@@ -1,0 +1,26 @@
+resource "aws_instance" "ec2-server" {
+  ami                    = "ami-052efd3df9dad4825"  ## ubuntu
+  instance_type          = "t2.micro" 
+
+  iam_instance_profile = aws_iam_instance_profile.profile.id
+
+  key_name               = "anils-us-east-key1"
+  vpc_security_group_ids = ["sg-0cc2a704d5e54eca8"]
+  tags = {
+    Name = "vm"
+  }
+  user_data = <<-EOF
+  #!/bin/bash
+  hostnamectl set-hostname docker_server
+  apt update
+  apt install -y nginx
+  wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+  sudo dpkg -i amazon-cloudwatch-agent.deb
+  curl https://raw.githubusercontent.com/Anil-appari007/aws-cloudwatch/master/ec2-logs-cw-with-terraform/cw-config.json > /opt/aws/amazon-cloudwatch-agent/bin/config.json
+  /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
+  EOF
+}
+output "public_ip_server" {
+  value       = aws_instance.ec2-server.public_ip
+  description = "this is ec2-server public ip"
+}
